@@ -1,0 +1,12 @@
+[package]
+name = "sic"
+version = "0.1.0"
+authors = ["d0nut <nathanial.lattimer@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32.0"
+futures = "0.1.25"
+hyper = "0.12.25"
+rand = "0.6"
+url = "1.7.2"
