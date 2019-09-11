@@ -11,7 +11,7 @@ I wrote a blog post on this. Read about it [here!](https://medium.com/@d0nut/bet
 
 This attack only works if the attacker at least one of these: 
 
-* Script tag injection (HTML injection, for example)
+* Style tag injection (HTML injection, for example)
 * Control of CSS at the top of a style tag.
 
 The first case is probably more likely and will work even if filtered through vanilla DOM Purify.
